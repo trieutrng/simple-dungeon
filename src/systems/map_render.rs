@@ -6,7 +6,8 @@ use crate::prelude::*;
 pub fn map_render(
     ecs: &SubWorld,
     #[resource] map: &Map, 
-    #[resource] camera: &Camera
+    #[resource] camera: &Camera,
+    #[resource] theme: &Box<dyn MapTheme>,
 ) {
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
     let player_fov = fov.iter(ecs).nth(0).unwrap();
@@ -17,34 +18,21 @@ pub fn map_render(
             let pt = Point::new(x, y);
             let offset = Point::new(camera.left_x, camera.top_y);
             let idx: usize = map_idx(x, y);
-            if map.in_bounds(pt) && (player_fov.visible_tiles.contains(&pt) | map.revealed_tiles[idx]) {
+            if map.in_bounds(pt) && (player_fov.visible_tiles.contains(&pt) || map.revealed_tiles[idx]) {
                 let tint = if player_fov.visible_tiles.contains(&pt) {
                     WHITE
                 } else {
                     DARK_GRAY
                 };
-                match map.tiles[idx] {
-                    TileType::Floor => {
-                        draw_batch.set(
-                            pt - offset,
-                            ColorPair::new(
-                                tint,
-                                BLACK
-                            ),
-                            to_cp437('.')
-                        );
-                    },
-                    TileType::Wall => {
-                        draw_batch.set(
-                            pt - offset,
-                            ColorPair::new(
-                                tint,
-                                BLACK
-                            ),
-                            to_cp437('#')
-                        );
-                    }
-                }
+                let glyph = theme.tile_to_render(map.tiles[idx]);
+                draw_batch.set(
+                    pt - offset,
+                    ColorPair::new(
+                        tint, 
+                        BLACK
+                    ),
+                    glyph
+                );
             }
         }
     }
